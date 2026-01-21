@@ -29,7 +29,7 @@ const App: React.FC = () => {
   // Real-time analysis state
   const [lastCodeLength, setLastCodeLength] = useState(0);
   const [aiThinking, setAiThinking] = useState(false);
-  const analysisTimeoutRef = useRef<NodeJS.Timeout>();
+  const analysisTimeoutRef = useRef<any>();
 
   // Challenge mode state
   const [challengeMode, setChallengeMode] = useState({
