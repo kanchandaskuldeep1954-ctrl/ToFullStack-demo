@@ -1,3 +1,18 @@
+let globalAudioContext: AudioContext | null = null;
+
+/**
+ * Initializes or resumes the global audio context on user gesture.
+ */
+export const initAudioContext = async () => {
+    if (!globalAudioContext) {
+        globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (globalAudioContext.state === 'suspended') {
+        await globalAudioContext.resume();
+    }
+    return globalAudioContext;
+};
+
 /**
  * Generates natural speech using Microsoft Edge TTS via serverless function.
  */
@@ -8,9 +23,8 @@ export const generateNaturalSpeech = async (text: string): Promise<AudioBuffer |
         if (!response.ok) throw new Error("TTS request failed");
 
         const arrayBuffer = await response.arrayBuffer();
-
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        return await audioContext.decodeAudioData(arrayBuffer);
+        const ctx = await initAudioContext();
+        return await ctx.decodeAudioData(arrayBuffer);
 
     } catch (error) {
         console.error("TTS Error:", error);
@@ -26,12 +40,13 @@ export const generateNaturalSpeech = async (text: string): Promise<AudioBuffer |
 export const speakWithBrowserTTS = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Use best available voice
+    // Ensure voices are loaded
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(v =>
         v.name.includes('Google UK English Male') ||
         v.name.includes('Samantha') ||
-        v.name.includes('Microsoft David')
+        v.name.includes('Microsoft David') ||
+        v.name.includes('Natural')
     );
 
     if (preferredVoice) utterance.voice = preferredVoice;

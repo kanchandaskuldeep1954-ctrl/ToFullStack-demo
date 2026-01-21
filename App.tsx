@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { CodeEditor } from './components/CodeEditor';
 import { ChatInterface } from './components/ChatInterface';
 import { generateAIResponse, validateCodeWithAI } from './services/groqService';
-import { generateNaturalSpeech, speakWithEmotion } from './services/voiceService';
+import { generateNaturalSpeech, speakWithEmotion, initAudioContext } from './services/voiceService';
 import { Message, GameState, Lesson, Badge } from './types';
 import { LESSONS, BADGES, ROADMAP, SYSTEM_PROMPT } from './constants';
 import { Trophy, Zap, Sparkles, Medal, Crown, Map, Info, Lock, CheckCircle, Heart } from 'lucide-react';
@@ -42,7 +42,6 @@ const App: React.FC = () => {
 
   // Refs
   const recognitionRef = useRef<any>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
 
   // --- Helpers ---
 
@@ -57,13 +56,10 @@ const App: React.FC = () => {
     const audioBuffer = await generateNaturalSpeech(text);
 
     if (audioBuffer) {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const source = audioContextRef.current.createBufferSource();
+      const ctx = await initAudioContext();
+      const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioContextRef.current.destination);
+      source.connect(ctx.destination);
 
       source.onended = () => setGameState(GameState.IDLE);
       setGameState(GameState.SPEAKING);
@@ -176,7 +172,10 @@ const App: React.FC = () => {
 
   // --- Voice Setup ---
 
-  const toggleListening = () => {
+  const toggleListening = async () => {
+    // Resume AudioContext on user gesture
+    await initAudioContext();
+
     if (gameState === GameState.LISTENING) {
       recognitionRef.current?.stop();
       setGameState(GameState.IDLE);
@@ -338,8 +337,6 @@ const App: React.FC = () => {
             isSpeaking={gameState === GameState.SPEAKING}
             onToggleListening={toggleListening}
             onStopSpeaking={() => {
-              if (audioContextRef.current) audioContextRef.current.close();
-              audioContextRef.current = null;
               window.speechSynthesis.cancel();
               setGameState(GameState.IDLE);
             }}
