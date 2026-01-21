@@ -1,0 +1,7 @@
+{
+  "name": "CodeVibe - Gen Z AI Mentor",
+  "description": "A voice-powered, gamified full-stack coding mentor designed for high engagement and hands-on learning.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
