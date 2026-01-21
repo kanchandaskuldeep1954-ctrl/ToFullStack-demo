@@ -1,32 +1,44 @@
 import { UniversalEdgeTTS } from 'edge-tts-universal';
 
-export default async function handler(req: any, res: any) {
-    const { text, voice = 'en-US-AriaNeural' } = req.query;
+export const config = {
+    runtime: 'edge',
+};
+
+export default async function handler(req: Request) {
+    const url = new URL(req.url);
+    const text = url.searchParams.get('text');
+    const voice = url.searchParams.get('voice') || 'en-US-AriaNeural';
 
     if (!text) {
-        return res.status(400).json({ error: 'Text is required' });
+        return new Response(JSON.stringify({ error: 'Text is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
-
-    console.log(`TTS Request: "${text.substring(0, 50)}..." Voice: ${voice}`);
 
     try {
         const tts = new UniversalEdgeTTS(text, voice);
         const audioBuffer = await tts.synthesize();
 
         if (!audioBuffer || audioBuffer.length === 0) {
-            console.error('TTS produced empty buffer');
-            return res.status(500).json({ error: 'TTS produced no audio' });
+            return new Response(JSON.stringify({ error: 'TTS produced no audio' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
         }
 
-        console.log(`TTS Success: Generated ${audioBuffer.length} bytes`);
-
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-
-        // Ensure we send it as a Buffer for Vercel compat
-        return res.status(200).send(Buffer.from(audioBuffer));
+        return new Response(audioBuffer, {
+            status: 200,
+            headers: {
+                'Content-Type': 'audio/mpeg',
+                'Cache-Control': 'public, max-age=31536000, immutable',
+            },
+        });
     } catch (error: any) {
         console.error('Edge TTS Error:', error);
-        return res.status(500).json({ error: error.message || 'Failed to generate speech' });
+        return new Response(JSON.stringify({ error: error.message || 'Failed to generate speech' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 }
