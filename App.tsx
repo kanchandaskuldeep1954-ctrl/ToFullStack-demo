@@ -56,6 +56,7 @@ const App: React.FC = () => {
     const audioBuffer = await generateNaturalSpeech(text);
 
     if (audioBuffer) {
+      console.log("Audio buffer received, playing...");
       const ctx = await initAudioContext();
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
